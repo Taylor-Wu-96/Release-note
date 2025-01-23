@@ -42,6 +42,7 @@ jobs:
           echo "PR Title: $PR_TITLE"
           echo "PR_TITLE=${PR_TITLE}" >> "$GITHUB_OUTPUT"
           PR_COMMENTS=$(gh pr view ${{ steps.find-pr.outputs.PR_NUMBER }} --json comments --jq '.comments')
+          PR_COMMENTS=$(echo "$PR_COMMENTS" | jq -c .)
           echo "PR Comments: $PR_COMMENTS"
           echo "PR_COMMENTS=${PR_COMMENTS}" >> "$GITHUB_OUTPUT"
 
@@ -49,10 +50,8 @@ jobs:
           FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | head -n 1)
           
           if [[ -n "$FIRST_RELEASE_COMMENT" ]]; then
-          echo "First comment with 'release':"
-          echo "$FIRST_RELEASE_COMMENT"
-          
-          echo "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
+            echo -e "First comment with 'release':\n$FIRST_RELEASE_COMMENT"
+            echo "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
           else
             echo "No comment with the word 'release' found."
             exit 1
