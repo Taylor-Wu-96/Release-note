@@ -84,17 +84,17 @@ jobs:
       #     echo "::set-output name=prs::$(gh pr list --state merged --base main --json number,title,body --jq '.[] | "### PR #\(.number): \(.title)\n\n\(.body)"' | sed ':a;N;$!ba;s/\n/\\n/g')"
       # # Step 3: Generate Release Notes
 
-      # - name: Generate Release Notes
-      #   run: |
-      #     echo "### Release Notes (Generated $(date))" > release-notes.md
-      #     echo "" >> release-notes.md
-      #     echo -e "${{ steps.pr-info.outputs.prs }}" >> release-notes.md
+      - name: Generate Release Notes
+        run: |
+          echo "### Release Notes (Generated $(date))" > release-notes.md
+          echo "" >> release-notes.md
+          echo -e "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}" >> release-notes.md
 
-      # # Step 4: Deploy to GitHub Pages
-      # - name: Deploy to GitHub Pages
-      #   uses: peaceiris/actions-gh-pages@v3
-      #   with:
-      #     github_token: ${{ secrets.GITHUB_TOKEN }}
-      #     publish_dir: ./release-notes
+      # Step 4: Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./release-notes
 
 
