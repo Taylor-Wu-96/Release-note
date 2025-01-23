@@ -46,19 +46,23 @@ jobs:
           echo "PR Comments: $PR_COMMENTS"
           echo "PR_COMMENTS=${PR_COMMENTS}" >> "$GITHUB_OUTPUT"
 
-          # Extract the first comment with the word 'release' in the body
-          FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | head -n 1)
+          # Extract and process the release comment, replacing escape sequences
+          FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | sed 's/\\r\\n/\n/g')
           
           if [[ -n "$FIRST_RELEASE_COMMENT" ]]; then
-            echo -e "First comment with 'release':\n$FIRST_RELEASE_COMMENT"
-            echo "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
+            # Use printf instead of echo for better handling of escape sequences
+            printf "First comment with 'release':\n%s\n" "$FIRST_RELEASE_COMMENT"
+            echo "FIRST_RELEASE_COMMENT<<EOF" >> "$GITHUB_OUTPUT"
+            echo "$FIRST_RELEASE_COMMENT" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
           else
             echo "No comment with the word 'release' found."
             exit 1
           fi
+
       - name: show
         run: |
-          echo -e ${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}
+          printf '%s\n' "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}"
 
       
       # - name: Merge and bump version
