@@ -1,0 +1,98 @@
+name: Auto Merge Release Candidates and Bump Version
+
+on:
+  - workflow_dispatch
+
+jobs:
+  auto-merge-release-candidates-and-bump-version:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Find PR for stable branch
+        id: find-pr
+        run: |
+          PR_NUMBER=$(gh pr list --base stable --json number,state --jq '.[0].number // empty')
+          PR_BRANCH=$(gh pr view $PR_NUMBER --json headRefName --jq '.headRefName')
+
+          if [[ -z "$PR_NUMBER" ]]; then
+            echo "No open PRs found."
+            exit 1
+          else
+            echo "PR Number: $PR_NUMBER"
+            echo "PR_NUMBER=${PR_NUMBER}" >> "$GITHUB_OUTPUT"
+            echo "PR Branch: $PR_BRANCH"
+            echo "PR_BRANCH=${PR_BRANCH}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check PR title and approvals
+        id: check-pr
+        run: |
+          PR_TITLE=$(gh pr view ${{ steps.find-pr.outputs.PR_NUMBER }} --json title --jq '.title')
+          echo "PR Title: $PR_TITLE"
+          echo "PR_TITLE=${PR_TITLE}" >> "$GITHUB_OUTPUT"
+          PR_COMMENTS=$(gh pr view ${{ steps.find-pr.outputs.PR_NUMBER }} --json comments --jq '.comments')
+          echo "PR Comments: $PR_COMMENTS"
+          echo "PR_COMMENTS=${PR_COMMENTS}" >> "$GITHUB_OUTPUT"
+
+          if [[ $PR_TITLE =~ ^release\((.+)\):\s*(.+)$ ]]; then
+            PR_SCOPE=${BASH_REMATCH[1]}
+            RELEASE_VERSION=${BASH_REMATCH[2]# }
+            echo "Scope: $PR_SCOPE"
+            echo "PR_SCOPE=${PR_SCOPE}" >> "$GITHUB_OUTPUT"
+            echo "Release version: $RELEASE_VERSION"
+            echo "RELEASE_VERSION=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+
+            APPROVALS=$(gh pr view ${{ steps.find-pr.outputs.PR_NUMBER }} --json reviews --jq '[.reviews[].state] | map(select(. == "APPROVED")) | length')
+            if [[ "$APPROVALS" -lt 1 ]]; then
+              echo "Not enough approvals."
+              exit 1
+            fi
+          else
+            echo "PR title format is incorrect."
+            exit 1
+          fi
+      
+      # - name: Merge and bump version
+      #   run: |
+      #     git config --global user.email "ama-dev@ama.com"
+      #     git config --global user.name "Github Action"
+      #     git fetch origin
+      #     git checkout stable
+
+      #     git merge origin/${{ steps.find-pr.outputs.PR_BRANCH }} --no-ff -m "release(${{ steps.check-pr.outputs.PR_SCOPE }}): ${{ steps.check-pr.outputs.RELEASE_VERSION }} (#${{ steps.find-pr.outputs.PR_NUMBER }})"
+      #     git push origin stable
+
+      #     git tag ${{ steps.check-pr.outputs.RELEASE_VERSION }}
+      #     git push origin ${{ steps.check-pr.outputs.RELEASE_VERSION }}
+      # # Step 2: Fetch Pull Request Metadata
+      # - name: Get Pull Request Information
+      #   id: pr-info
+      #   run: |
+      #     echo "::set-output name=prs::$(gh pr list --state merged --base main --json number,title,body --jq '.[] | "### PR #\(.number): \(.title)\n\n\(.body)"' | sed ':a;N;$!ba;s/\n/\\n/g')"
+      # # Step 3: Generate Release Notes
+
+      # - name: Generate Release Notes
+      #   run: |
+      #     echo "### Release Notes (Generated $(date))" > release-notes.md
+      #     echo "" >> release-notes.md
+      #     echo -e "${{ steps.pr-info.outputs.prs }}" >> release-notes.md
+
+      # # Step 4: Deploy to GitHub Pages
+      # - name: Deploy to GitHub Pages
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     publish_dir: ./release-notes
+
+
