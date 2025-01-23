@@ -86,9 +86,10 @@ jobs:
 
       - name: Generate Release Notes
         run: |
-          echo "### Release Notes (Generated $(date))" > release-notes.md
-          echo "" >> release-notes.md
-          echo -e "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}" >> release-notes.md
+          mkdir -p release-notes
+          echo "### Release Notes (Generated $(date))" > release-notes/index.md
+          echo "" >> release-notes/index.md
+          echo -e "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}" >> release-notes/index.md
 
       # Step 4: Deploy to GitHub Pages
       - name: Deploy to GitHub Pages
@@ -96,5 +97,8 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./release-notes
+          enable_jekyll: false
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
 
 
