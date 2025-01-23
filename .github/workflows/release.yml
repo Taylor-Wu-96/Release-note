@@ -47,10 +47,12 @@ jobs:
 
           # Extract the first comment with the word 'release' in the body
           FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | head -n 1)
-
+          
           if [[ -n "$FIRST_RELEASE_COMMENT" ]]; then
-            echo -e "First comment with 'release': $FIRST_RELEASE_COMMENT"
-            echo -e "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
+          echo "First comment with 'release':"
+          echo "$FIRST_RELEASE_COMMENT"
+          
+          echo "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
           else
             echo "No comment with the word 'release' found."
             exit 1
