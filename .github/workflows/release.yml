@@ -49,30 +49,16 @@ jobs:
           FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | head -n 1)
 
           if [[ -n "$FIRST_RELEASE_COMMENT" ]]; then
-            echo "First comment with 'release': $FIRST_RELEASE_COMMENT"
-            echo "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
+            echo -e "First comment with 'release': $FIRST_RELEASE_COMMENT"
+            echo -e "FIRST_RELEASE_COMMENT=${FIRST_RELEASE_COMMENT}" >> "$GITHUB_OUTPUT"
           else
             echo "No comment with the word 'release' found."
             exit 1
           fi
+      - name: show
+        run: |
+          echo -e ${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}
 
-          if [[ $PR_TITLE =~ ^release\((.+)\):\s*(.+)$ ]]; then
-            PR_SCOPE=${BASH_REMATCH[1]}
-            RELEASE_VERSION=${BASH_REMATCH[2]# }
-            echo "Scope: $PR_SCOPE"
-            echo "PR_SCOPE=${PR_SCOPE}" >> "$GITHUB_OUTPUT"
-            echo "Release version: $RELEASE_VERSION"
-            echo "RELEASE_VERSION=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
-
-            APPROVALS=$(gh pr view ${{ steps.find-pr.outputs.PR_NUMBER }} --json reviews --jq '[.reviews[].state] | map(select(. == "APPROVED")) | length')
-            if [[ "$APPROVALS" -lt 1 ]]; then
-              echo "Not enough approvals."
-              exit 1
-            fi
-          else
-            echo "PR title format is incorrect."
-            exit 1
-          fi
       
       # - name: Merge and bump version
       #   run: |
