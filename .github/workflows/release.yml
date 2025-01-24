@@ -8,6 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+      DEFAULT_BRANCH: stable
     permissions:
       contents: write
     steps:
@@ -24,7 +25,7 @@ jobs:
       - name: Find PR for stable branch
         id: find-pr
         run: |
-          PR_NUMBER=$(gh pr list --base stable --json number,state --jq '.[0].number // empty')
+          PR_NUMBER=$(gh pr list --base ${{ env.DEFAULT_BRANCH }} --json number,state --jq '.[0].number // empty')
           PR_BRANCH=$(gh pr view $PR_NUMBER --json headRefName --jq '.headRefName')
 
           if [[ -z "$PR_NUMBER" ]]; then
@@ -109,10 +110,24 @@ jobs:
       #     enable_jekyll: false
       #     user_name: 'github-actions[bot]'
       #     user_email: 'github-actions[bot]@users.noreply.github.com'
+      - name: Merge and bump version
+        run: |
+          git config --global user.email "aiqua-dev@appier.com"
+          git config --global user.name "Github Action"
+          git fetch origin
+          git checkout ${{ env.DEFAULT_BRANCH }}
+
+          git merge origin/${{ steps.find-pr.outputs.PR_BRANCH }} --no-ff -m "release(${{ steps.check-pr.outputs.PR_SCOPE }}): ${{ steps.check-pr.outputs.RELEASE_VERSION }} (#${{ steps.find-pr.outputs.PR_NUMBER }})"
+          git push origin ${{ env.DEFAULT_BRANCH }}
+
+          git tag ${{ steps.check-pr.outputs.RELEASE_VERSION }}
+          git push origin ${{ steps.check-pr.outputs.RELEASE_VERSION }}
+
           
       - name: Publish Release
         uses: ncipollo/release-action@v1
         with:
+          allowUpdates: true
           token: ${{ secrets.GITHUB_TOKEN }}
           name: ${{ steps.check-pr.outputs.PR_TITLE }}
           tag: ${{ steps.check-pr.outputs.RELEASE_VERSION }}
