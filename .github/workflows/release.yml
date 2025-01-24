@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ github.token }}
+    permissions:
+      contents: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -59,7 +61,14 @@ jobs:
             echo "No comment with the word 'release' found."
             exit 1
           fi
-
+          if [[ $PR_TITLE =~ ^release\((.+)\):\s*(.+)$ ]]; then
+            PR_SCOPE=${BASH_REMATCH[1]}
+            RELEASE_VERSION=${BASH_REMATCH[2]# }
+            echo "Scope: $PR_SCOPE"
+            echo "PR_SCOPE=${PR_SCOPE}" >> "$GITHUB_OUTPUT"
+            echo "Release version: $RELEASE_VERSION"
+            echo "RELEASE_VERSION=${RELEASE_VERSION}" >> "$GITHUB_OUTPUT"
+          fi
       - name: show
         run: |
           printf '%s\n' "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}"
@@ -84,21 +93,29 @@ jobs:
       #     echo "::set-output name=prs::$(gh pr list --state merged --base main --json number,title,body --jq '.[] | "### PR #\(.number): \(.title)\n\n\(.body)"' | sed ':a;N;$!ba;s/\n/\\n/g')"
       # # Step 3: Generate Release Notes
 
-      - name: Generate Release Notes
-        run: |
-          mkdir -p release-notes
-          echo "### Release Notes (Generated $(date))" > release-notes/index.md
-          echo "" >> release-notes/index.md
-          echo -e "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}" >> release-notes/index.md
+      # - name: Generate Release Notes
+      #   run: |
+      #     mkdir -p release-notes
+      #     echo "### Release Notes (Generated $(date))" > release-notes/index.md
+      #     echo "" >> release-notes/index.md
+      #     echo -e "${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}" >> release-notes/index.md
 
-      # Step 4: Deploy to GitHub Pages
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      # # Step 4: Deploy to GitHub Pages
+      # - name: Deploy to GitHub Pages
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     publish_dir: ./release-notes
+      #     enable_jekyll: false
+      #     user_name: 'github-actions[bot]'
+      #     user_email: 'github-actions[bot]@users.noreply.github.com'
+          
+      - name: Publish Release
+        uses: ncipollo/release-action@v1
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./release-notes
-          enable_jekyll: false
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          name: ${{ steps.check-pr.outputs.PR_TITLE }}
+          tag: ${{ steps.check-pr.outputs.RELEASE_VERSION }}
+          body: ${{ steps.check-pr.outputs.FIRST_RELEASE_COMMENT }}
 
 
