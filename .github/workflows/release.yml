@@ -9,6 +9,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       DEFAULT_BRANCH: stable
+      RELEASE_DOC_KEYWORDS: release
     permissions:
       contents: write
     steps:
@@ -50,8 +51,9 @@ jobs:
           echo "PR_COMMENTS=${PR_COMMENTS}" >> "$GITHUB_OUTPUT"
 
           # Extract and process the release comment, replacing escape sequences
-          FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | sed 's/\\r\\n/\n/g')
-          
+          # FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r '.[] | select(.body | test("release"; "i")) | .body' | sed 's/\\r\\n/\n/g')
+          FIRST_RELEASE_COMMENT=$(echo "$PR_COMMENTS" | jq -r ".[] | select(.body | test(\"${{ env.RELEASE_DOC_KEYWORDS }}\"; \"i\")) | .body" | sed 's/\\r\\n/\n/g')
+
           if [[ -n "$FIRST_RELEASE_COMMENT" ]]; then
             # Use printf instead of echo for better handling of escape sequences
             printf "First comment with 'release':\n%s\n" "$FIRST_RELEASE_COMMENT"
